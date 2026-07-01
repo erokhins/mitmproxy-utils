@@ -62,7 +62,7 @@ JVM-based. `proxy.env` sets `JAVA_TOOL_OPTIONS` with the proxy host/port and tru
 
 ```bash
 TRUSTSTORE_PASSWORD="your-secret-password"
-CACERTS=$(java -XshowSettings:property -version 2>&1 | grep java.home | awk '{print $NF}')/lib/security/cacerts
+CACERTS=$(java -XshowSettings:properties -version 2>&1 | grep java.home | awk '{print $NF}')/lib/security/cacerts
 cp "$CACERTS" ~/.mitmproxy/mitmproxy-truststore.jks
 keytool -importcert -alias mitmproxy \
   -file ~/.mitmproxy/mitmproxy-ca-cert.pem \
