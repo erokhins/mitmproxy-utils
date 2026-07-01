@@ -35,16 +35,11 @@ Ready-to-use config files live in `tmp/experiment/`. Run experiments from that d
 
 ### Claude Code
 
-File: `tmp/experiment/.claude/settings.json` — picked up automatically when you run `claude` from that directory.
+Claude Code is Node.js-based and respects standard proxy env vars:
 
-```json
-{
-  "env": {
-    "HTTP_PROXY": "http://localhost:8080",
-    "HTTPS_PROXY": "http://localhost:8080",
-    "NODE_EXTRA_CA_CERTS": "/home/erokhins/.mitmproxy/mitmproxy-ca-cert.pem"
-  }
-}
+```bash
+source tmp/experiment/proxy.env
+claude
 ```
 
 ### Junie
