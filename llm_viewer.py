@@ -213,6 +213,131 @@ def request(flow: http.HTTPFlow) -> None:
     _push_sse({"id": flow.id, "model": data["model"], "url": data["url"], "timestamp": data["timestamp"]})
 
 
+def _parse_sse_events(body: bytes) -> list[tuple[str | None, dict]]:
+    """Parse an SSE body into (event_name, data_dict) pairs."""
+    events: list[tuple[str | None, dict]] = []
+    current_event: str | None = None
+    current_data: list[str] = []
+    for line in body.decode("utf-8", errors="replace").splitlines():
+        if line.startswith("event:"):
+            current_event = line[6:].strip()
+        elif line.startswith("data:"):
+            chunk = line[5:].strip()
+            if chunk and chunk != "[DONE]":
+                current_data.append(chunk)
+        elif not line and current_data:
+            try:
+                events.append((current_event, json.loads("\n".join(current_data))))
+            except Exception:
+                pass
+            current_event = None
+            current_data = []
+    return events
+
+
+def _parse_sse_response(body: bytes) -> dict | None:
+    events = _parse_sse_events(body)
+    if not events:
+        return None
+
+    # ── OpenAI Responses API streaming ────────────────────────────────────────
+    for event_name, data in events:
+        if event_name == "response.completed" and isinstance(data.get("response"), dict):
+            return _parse_response(data["response"])
+
+    # ── Anthropic streaming ───────────────────────────────────────────────────
+    message_start: dict | None = None
+    content_blocks: dict[int, dict] = {}
+    stop_reason: str | None = None
+    usage: dict = {}
+
+    for _, data in events:
+        t = data.get("type")
+        if t == "message_start":
+            message_start = data.get("message", {})
+            usage = dict(message_start.get("usage", {}))
+        elif t == "content_block_start":
+            idx = data.get("index", 0)
+            content_blocks[idx] = dict(data.get("content_block", {}))
+        elif t == "content_block_delta":
+            idx = data.get("index", 0)
+            delta = data.get("delta", {})
+            block = content_blocks.setdefault(idx, {})
+            dt = delta.get("type")
+            if dt == "text_delta":
+                block["text"] = block.get("text", "") + delta.get("text", "")
+                block.setdefault("type", "text")
+            elif dt == "thinking_delta":
+                block["thinking"] = block.get("thinking", "") + delta.get("thinking", "")
+                block.setdefault("type", "thinking")
+            elif dt == "input_json_delta":
+                block["_json"] = block.get("_json", "") + delta.get("partial_json", "")
+        elif t == "message_delta":
+            stop_reason = data.get("delta", {}).get("stop_reason", stop_reason)
+            usage.update(data.get("usage", {}))
+
+    if message_start is not None:
+        blocks = []
+        for idx in sorted(content_blocks):
+            b = content_blocks[idx]
+            if "_json" in b:
+                try:
+                    b["input"] = json.loads(b.pop("_json"))
+                except Exception:
+                    b["input"] = {}
+            blocks.append(b)
+        return _parse_response({
+            "id": message_start.get("id"),
+            "type": "message",
+            "role": "assistant",
+            "content": blocks,
+            "stop_reason": stop_reason,
+            "usage": usage,
+        })
+
+    # ── OpenAI Chat Completions streaming ─────────────────────────────────────
+    text_parts: list[str] = []
+    reasoning_parts: list[str] = []
+    finish_reason: str | None = None
+    chat_id: str | None = None
+    raw_usage: dict = {}
+
+    for _, data in events:
+        if data.get("object") != "chat.completion.chunk":
+            continue
+        chat_id = chat_id or data.get("id")
+        choices = data.get("choices") or []
+        if choices:
+            delta = choices[0].get("delta", {})
+            if delta.get("content"):
+                text_parts.append(delta["content"])
+            r = delta.get("reasoning") or delta.get("reasoning_content") or ""
+            if r:
+                reasoning_parts.append(r)
+            if choices[0].get("finish_reason"):
+                finish_reason = choices[0]["finish_reason"]
+        if data.get("usage"):
+            raw_usage = data["usage"]
+
+    if text_parts or reasoning_parts:
+        blocks = []
+        if reasoning_parts:
+            blocks.append({"type": "thinking", "thinking": "".join(reasoning_parts)})
+        if text_parts:
+            blocks.append({"type": "text", "text": "".join(text_parts)})
+        return {
+            "id": chat_id,
+            "content": blocks,
+            "stop_reason": finish_reason,
+            "usage": {
+                "input_tokens": raw_usage.get("prompt_tokens"),
+                "output_tokens": raw_usage.get("completion_tokens"),
+            },
+        }
+
+    return None
+
+
 def _parse_response(parsed: dict) -> dict | None:
     """Normalize Anthropic or OpenAI-compatible response to a common shape."""
     # Anthropic format: {"type": "message", "content": [...], "stop_reason": ...}
@@ -303,7 +428,7 @@ def _parse_response(parsed: dict) -> dict | None:
     return None
 
 
-def response(flow: http.HTTPFlow) -> None:
+def _handle_response_body(flow: http.HTTPFlow) -> None:
     with _lock:
         if flow.id not in _flows:
             return
@@ -311,9 +436,13 @@ def response(flow: http.HTTPFlow) -> None:
         body = flow.response.content
         if not body:
             return
-        if "json" not in flow.response.headers.get("content-type", ""):
+        ct = flow.response.headers.get("content-type", "")
+        if "text/event-stream" in ct:
+            resp = _parse_sse_response(body)
+        elif "json" in ct:
+            resp = _parse_response(json.loads(body))
+        else:
             return
-        resp = _parse_response(json.loads(body))
         if resp is None:
             return
         with _lock:
@@ -321,6 +450,17 @@ def response(flow: http.HTTPFlow) -> None:
         _push_sse({"type": "response", "id": flow.id})
     except Exception:
         pass
+
+
+def response(flow: http.HTTPFlow) -> None:
+    _handle_response_body(flow)
+
+
+def error(flow: http.HTTPFlow) -> None:
+    # sse_capture.py saves the buffered SSE body to flow.response.content
+    # in its error hook (which runs before ours). Parse it here.
+    if flow.response:
+        _handle_response_body(flow)
 
 
 def running() -> None:
