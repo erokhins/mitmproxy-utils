@@ -103,6 +103,8 @@ Buffers streaming (`text/event-stream`) response bodies and saves them explicitl
 
 A standalone web UI on **http://localhost:8082** that renders captured LLM requests with full markdown and syntax highlighting. Useful as a richer alternative to the mitmweb flow inspector.
 
+![LLM Viewer](llm_viewer_screenshot.png)
+
 ## Scripts
 
 | File | Purpose |
