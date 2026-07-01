@@ -71,16 +71,16 @@ File: `tmp/experiment/codex.json` — picked up automatically by the Codex CLI.
 }
 ```
 
-### Pi / other tools
+### Pi
 
-For tools that don't have a project-level proxy config, source `tmp/experiment/proxy.env` before running:
+Pi ([pi.dev](https://pi.dev)) is a Node.js CLI agent. It has no project-level proxy config, so route it through the proxy via environment variables:
 
 ```bash
 source tmp/experiment/proxy.env
 pi ...
 ```
 
-This sets `HTTP_PROXY`, `HTTPS_PROXY`, `NODE_EXTRA_CA_CERTS`, `SSL_CERT_FILE`, and `REQUESTS_CA_BUNDLE`.
+`proxy.env` sets `HTTP_PROXY`, `HTTPS_PROXY`, and `NODE_EXTRA_CA_CERTS` (for the mitmproxy CA cert so TLS interception works). Pi's `models.json` `baseUrl` field redirects to a different API server — that's not the same as a forward proxy and won't help here.
 
 ## Addons
 
