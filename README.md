@@ -12,13 +12,16 @@ Intercepts and renders LLM API traffic (Anthropic, OpenAI chat completions, Open
 
 This downloads mitmproxy 12.2.2 for Linux x86_64 into the current directory. The binaries are git-ignored.
 
-**2. Configure your application** to use the proxy:
+**2. Trust the mitmproxy CA certificate** (one-time, so HTTPS interception works):
 
-```json
-"debugProxyUrl": "http://localhost:8080/"
+```bash
+./mitmweb &   # run once to generate the cert, then kill it
+# cert is now at ~/.mitmproxy/mitmproxy-ca-cert.pem
 ```
 
-**3. Start the proxy**:
+**3. Configure your client** — see [Configuring clients](#configuring-clients) below.
+
+**4. Start the proxy**:
 
 ```bash
 ./start.sh
@@ -26,12 +29,58 @@ This downloads mitmproxy 12.2.2 for Linux x86_64 into the current directory. The
 
 Then open **http://localhost:8081** (mitmweb UI). LLM requests are automatically rendered with the "LLM Request" content view.
 
-## Scripts
+## Configuring clients
 
-| File | Purpose |
-|------|---------|
-| `start.sh` | Launch mitmweb with the LLM addons |
-| `init.sh` | Download mitmproxy binaries |
+Ready-to-use config files live in `tmp/experiment/`. Run experiments from that directory so each tool picks up its config automatically.
+
+### Claude Code
+
+File: `tmp/experiment/.claude/settings.json` — picked up automatically when you run `claude` from that directory.
+
+```json
+{
+  "env": {
+    "HTTP_PROXY": "http://localhost:8080",
+    "HTTPS_PROXY": "http://localhost:8080",
+    "NODE_EXTRA_CA_CERTS": "/home/erokhins/.mitmproxy/mitmproxy-ca-cert.pem"
+  }
+}
+```
+
+### Junie
+
+File: `tmp/experiment/.junie/models/proxy.json` — add your model's `baseUrl`, `id`, and `apiKey`, then select this model in Junie.
+
+```json
+{
+  "baseUrl": "FILL_IN",
+  "id": "FILL_IN",
+  "apiType": "OpenAICompletion",
+  "apiKey": "FILL_IN",
+  "debugProxyUrl": "http://localhost:8080/"
+}
+```
+
+### Codex
+
+File: `tmp/experiment/codex.json` — picked up automatically by the Codex CLI.
+
+```json
+{
+  "proxy": "http://localhost:8080"
+}
+```
+
+### Pi / other tools
+
+For tools that don't have a project-level proxy config, source `tmp/experiment/proxy.env` before running:
+
+```bash
+source tmp/experiment/proxy.env
+pi ...
+```
+
+This sets `HTTP_PROXY`, `HTTPS_PROXY`, `NODE_EXTRA_CA_CERTS`, `SSL_CERT_FILE`, and `REQUESTS_CA_BUNDLE`.
 
 ## Addons
 
@@ -52,4 +101,9 @@ A mitmproxy content-view addon. Automatically activates on requests that look li
 
 A standalone web UI on **http://localhost:8082** that renders captured LLM requests with full markdown and syntax highlighting. Useful as a richer alternative to the mitmweb flow inspector.
 
+## Scripts
 
+| File | Purpose |
+|------|---------|
+| `start.sh` | Launch mitmweb with the LLM addons |
+| `init.sh` | Download mitmproxy binaries |

@@ -4,3 +4,4 @@ mitmweb
 __pycache__/
 *.py[cod]
 .mitmproxy/
+tmp/
