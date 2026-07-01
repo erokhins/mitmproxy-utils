@@ -91,6 +91,10 @@ A mitmproxy content-view addon. Automatically activates on requests that look li
 - Pretty-printed JSON
 - `\n` escape sequences inside strings are expanded into real newlines, indented to align with the opening `"` of the string value — making long system prompts and message content readable without scrolling through escaped text
 
+### `sse_capture.py`
+
+Buffers streaming (`text/event-stream`) response bodies and saves them explicitly in both the `response` and `error` hooks. Without this, flows where the client disconnects after reading a stream (the normal SSE lifecycle) show an empty response body in mitmweb because mitmproxy discards the in-flight buffer when it hits the error path.
+
 ### `llm_viewer.py`
 
 A standalone web UI on **http://localhost:8083** that renders captured LLM requests with full markdown and syntax highlighting. Useful as a richer alternative to the mitmweb flow inspector.
