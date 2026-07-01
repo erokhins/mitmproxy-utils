@@ -653,16 +653,21 @@ function renderBlock(b) {
       </div>
       <div class="tool-body" id="${id}">${md(b.thinking||'')}</div></div>`;
   }
-  if (t === 'tool_use') {
+  if (t === 'tool_use' || t === 'function_call') {
     const id = uid();
+    let input = b.input || {};
+    if (t === 'function_call' && typeof b.arguments === 'string') {
+      try { input = JSON.parse(b.arguments); } catch(e) { input = {arguments: b.arguments}; }
+    }
+    const callId = b.call_id || b.id || '';
     return `<div class="tool">
       <div class="tool-hd" onclick="tog('${id}')">
         <span class="tool-nm">⚙ ${esc(b.name||'?')}</span>
-        <span class="tool-id">${esc(b.id||'')}</span>
+        <span class="tool-id">${esc(callId)}</span>
         <span class="tool-arr" id="${id}a">▶</span>
       </div>
       <div class="tool-body" id="${id}">
-        <pre><code class="hljs language-json">${jsonHl(b.input||{})}</code></pre>
+        <pre><code class="hljs language-json">${jsonHl(input)}</code></pre>
       </div></div>`;
   }
   if (t === 'tool_result') {
