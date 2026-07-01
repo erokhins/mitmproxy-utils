@@ -51,9 +51,11 @@ File: `tmp/experiment/.claude/settings.json` — picked up automatically when yo
 
 Junie is JVM-based, so it ignores `HTTP_PROXY`. Use `JAVA_TOOL_OPTIONS` instead, which the JVM reads automatically at startup.
 
-**One-time: create a JKS truststore** from the mitmproxy CA cert so Junie trusts intercepted TLS connections:
+**One-time: create a JKS truststore.** Copy the default Java cacerts first, then add the mitmproxy CA on top. This is important — setting `javax.net.ssl.trustStore` replaces the default truststore entirely, so without the standard CAs included, Junie can't verify any normal HTTPS endpoint either.
 
 ```bash
+CACERTS=$(java -XshowSettings:property -version 2>&1 | grep java.home | awk '{print $NF}')/lib/security/cacerts
+cp "$CACERTS" ~/.mitmproxy/mitmproxy-truststore.jks
 keytool -importcert -alias mitmproxy \
   -file ~/.mitmproxy/mitmproxy-ca-cert.pem \
   -keystore ~/.mitmproxy/mitmproxy-truststore.jks \
