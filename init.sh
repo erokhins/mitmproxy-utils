@@ -1,6 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+BINARIES=(mitmproxy mitmdump mitmweb)
+
+if command -v mitmweb &>/dev/null; then
+  echo "Detected system-wide mitmproxy installation. Creating symlinks..."
+  for bin in "${BINARIES[@]}"; do
+    path=$(command -v "$bin")
+    ln -sf "$path" "./$bin"
+    echo "  $bin -> $path"
+  done
+  echo "Done. Run ./start.sh to launch."
+  exit 0
+fi
+
 VERSION="12.2.2"
 PLATFORM="linux"
 ARCH="x86_64"
