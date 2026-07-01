@@ -63,12 +63,12 @@ File: `tmp/experiment/.junie/models/proxy.json` — add your model's `baseUrl`, 
 
 ### Codex
 
-Codex's LLM HTTP client does not honor `HTTP_PROXY`/`HTTPS_PROXY` (open issue [openai/codex#4242](https://github.com/openai/codex/issues/4242)). The workaround is a **reverse proxy**: `start.sh` runs a second mitmproxy listener on port 8082 that reverse-proxies to `api.openai.com`. Codex connects to it directly — no TLS cert trust issues, no proxy env vars needed.
+Codex's LLM HTTP client does not honor `HTTP_PROXY`/`HTTPS_PROXY` (open issue [openai/codex#4242](https://github.com/openai/codex/issues/4242)). The workaround is a **reverse proxy**: `start.sh` runs a second mitmproxy listener on port 8083 that reverse-proxies to `api.openai.com`. Codex connects to it directly — no TLS cert trust issues, no proxy env vars needed.
 
 Add to `~/.codex/config.toml` (template in `tmp/experiment/codex_config.toml`):
 
 ```toml
-openai_base_url = "http://localhost:8082"
+openai_base_url = "http://localhost:8083"
 ```
 
 Codex flows appear in the same mitmweb UI as all other traffic.
@@ -101,7 +101,7 @@ A mitmproxy content-view addon. Automatically activates on requests that look li
 
 ### `llm_viewer.py`
 
-A standalone web UI on **http://localhost:8082** that renders captured LLM requests with full markdown and syntax highlighting. Useful as a richer alternative to the mitmweb flow inspector.
+A standalone web UI on **http://localhost:8083** that renders captured LLM requests with full markdown and syntax highlighting. Useful as a richer alternative to the mitmweb flow inspector.
 
 ## Scripts
 
