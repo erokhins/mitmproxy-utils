@@ -643,7 +643,7 @@ function showMsgTab(bodyId, jsonId, panel, btn) {
 function renderBlock(b) {
   if (typeof b === 'string') return md(b);
   const t = b.type || 'unknown';
-  if (t === 'text') return md(b.text || '');
+  if (t === 'text' || t === 'input_text' || t === 'output_text') return md(b.text || '');
   if (t === 'thinking') {
     const id = uid();
     return `<div class="tool">
