@@ -63,12 +63,15 @@ File: `tmp/experiment/.junie/models/proxy.json` — add your model's `baseUrl`, 
 
 ### Codex
 
-Codex has no project-level proxy config — it reads `HTTP_PROXY`/`HTTPS_PROXY` from the environment:
+Codex's LLM HTTP client does not honor `HTTP_PROXY`/`HTTPS_PROXY` (open issue [openai/codex#4242](https://github.com/openai/codex/issues/4242)). The workaround is a **reverse proxy**: `start.sh` runs a second mitmproxy listener on port 8082 that reverse-proxies to `api.openai.com`. Codex connects to it directly — no TLS cert trust issues, no proxy env vars needed.
 
-```bash
-source tmp/experiment/proxy.env
-codex ...
+Add to `~/.codex/config.toml` (template in `tmp/experiment/codex_config.toml`):
+
+```toml
+openai_base_url = "http://localhost:8082"
 ```
+
+Codex flows appear in the same mitmweb UI as all other traffic.
 
 ### Pi
 
