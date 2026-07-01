@@ -79,7 +79,7 @@ def _parse_flow(flow: http.HTTPFlow) -> dict | None:
             "model": parsed.get("model", ""),
             "max_tokens": max_tokens,
             "temperature": parsed.get("temperature"),
-            "system": parsed.get("system"),
+            "system": parsed.get("system") or parsed.get("instructions"),
             "messages": messages,
             "tools": _normalize_tools(parsed.get("tools")),
             "tool_choice": parsed.get("tool_choice"),
