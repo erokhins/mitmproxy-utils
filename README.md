@@ -29,39 +29,45 @@ This downloads mitmproxy 12.2.2 for Linux x86_64 into the current directory. The
 
 Then open **http://localhost:8081** (mitmweb UI). LLM requests are automatically rendered with the "LLM Request" content view.
 
-## Configuring clients
+## proxy.env
 
-Ready-to-use config files live in `tmp/experiment/`. Run experiments from that directory so each tool picks up its config automatically.
+`proxy.env` is the single file that routes all supported AI tools through the proxy. Source it before running any tool:
+
+```bash
+source proxy.env
+claude / junie / codex / pi ...
+```
+
+It sets:
+- `HTTP_PROXY` / `HTTPS_PROXY` — for Node.js tools (Claude Code, Codex, Pi)
+- `NODE_EXTRA_CA_CERTS` / `SSL_CERT_FILE` / `REQUESTS_CA_BUNDLE` — CA cert for TLS interception
+- `JAVA_TOOL_OPTIONS` — proxy host/port and truststore for JVM tools (Junie)
+
+**Before using it**, edit the `TRUSTSTORE_PASSWORD` variable at the bottom of `proxy.env`.
+> ⚠️ **Change the truststore password** from the default `"changeit"` to something private before use.
+
+## Configuring clients
 
 ### Claude Code
 
-Claude Code is Node.js-based and respects standard proxy env vars:
-
-```bash
-source tmp/experiment/proxy.env
-claude
-```
+Node.js-based, respects standard proxy env vars — covered by `proxy.env`.
 
 ### Junie
 
-Junie is JVM-based, so it ignores `HTTP_PROXY`. Use `JAVA_TOOL_OPTIONS` instead, which the JVM reads automatically at startup.
+JVM-based. `proxy.env` sets `JAVA_TOOL_OPTIONS` with the proxy host/port and truststore path.
 
-**One-time: create a JKS truststore.** Copy the default Java cacerts first, then add the mitmproxy CA on top. This is important — setting `javax.net.ssl.trustStore` replaces the default truststore entirely, so without the standard CAs included, Junie can't verify any normal HTTPS endpoint either.
+**One-time: create the JKS truststore.** Copy the default Java cacerts first, then add the mitmproxy CA on top — this is critical because `javax.net.ssl.trustStore` replaces the default truststore entirely, so without the standard CAs Junie can't verify any normal HTTPS endpoint.
+
+> ⚠️ **Use a real password** instead of `changeit`, and set the same password in `proxy.env`.
 
 ```bash
+TRUSTSTORE_PASSWORD="your-secret-password"
 CACERTS=$(java -XshowSettings:property -version 2>&1 | grep java.home | awk '{print $NF}')/lib/security/cacerts
 cp "$CACERTS" ~/.mitmproxy/mitmproxy-truststore.jks
 keytool -importcert -alias mitmproxy \
   -file ~/.mitmproxy/mitmproxy-ca-cert.pem \
   -keystore ~/.mitmproxy/mitmproxy-truststore.jks \
-  -storepass changeit -noprompt
-```
-
-**Then source `proxy.env`** before running Junie — it sets `JAVA_TOOL_OPTIONS` with the proxy host/port and truststore path:
-
-```bash
-source tmp/experiment/proxy.env
-junie
+  -storepass "$TRUSTSTORE_PASSWORD" -noprompt
 ```
 
 Alternatively, Junie's model config supports `"debugProxyUrl"` for routing a specific model's traffic through the proxy without needing `JAVA_TOOL_OPTIONS`. Template: `tmp/experiment/.junie/models/proxy.json`.
@@ -72,14 +78,7 @@ Codex's LLM HTTP client does not honor `HTTP_PROXY`/`HTTPS_PROXY` (open issue [o
 
 ### Pi
 
-Pi ([pi.dev](https://pi.dev)) is a Node.js CLI agent. It has no project-level proxy config, so route it through the proxy via environment variables:
-
-```bash
-source tmp/experiment/proxy.env
-pi ...
-```
-
-`proxy.env` sets `HTTP_PROXY`, `HTTPS_PROXY`, and `NODE_EXTRA_CA_CERTS` (for the mitmproxy CA cert so TLS interception works). Pi's `models.json` `baseUrl` field redirects to a different API server — that's not the same as a forward proxy and won't help here.
+Node.js-based, respects standard proxy env vars — covered by `proxy.env`. Note: Pi's `models.json` `baseUrl` field redirects to a different API server, not through a forward proxy.
 
 ## Addons
 
@@ -102,7 +101,7 @@ Buffers streaming (`text/event-stream`) response bodies and saves them explicitl
 
 ### `llm_viewer.py`
 
-A standalone web UI on **http://localhost:8083** that renders captured LLM requests with full markdown and syntax highlighting. Useful as a richer alternative to the mitmweb flow inspector.
+A standalone web UI on **http://localhost:8082** that renders captured LLM requests with full markdown and syntax highlighting. Useful as a richer alternative to the mitmweb flow inspector.
 
 ## Scripts
 
@@ -110,3 +109,4 @@ A standalone web UI on **http://localhost:8083** that renders captured LLM reque
 |------|---------|
 | `start.sh` | Launch mitmweb with the LLM addons |
 | `init.sh` | Download mitmproxy binaries |
+| `proxy.env` | Environment variables for routing all AI tools through the proxy |
