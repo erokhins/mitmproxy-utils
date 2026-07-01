@@ -53,13 +53,3 @@ A mitmproxy content-view addon. Automatically activates on requests that look li
 A standalone web UI on **http://localhost:8082** that renders captured LLM requests with full markdown and syntax highlighting. Useful as a richer alternative to the mitmweb flow inspector.
 
 
-## Examples
-
-`examples/` contains sample JSON payloads for each supported API format:
-
-| File | Format |
-|------|--------|
-| `example_messages.json` | Anthropic Messages API request |
-| `example_completion.json` | OpenAI chat-completions request |
-| `example_responses.json` | OpenAI Responses API request |
-| `example_responses_responce.json` | OpenAI Responses API response |
