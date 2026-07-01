@@ -63,12 +63,11 @@ File: `tmp/experiment/.junie/models/proxy.json` — add your model's `baseUrl`, 
 
 ### Codex
 
-File: `tmp/experiment/codex.json` — picked up automatically by the Codex CLI.
+Codex has no project-level proxy config — it reads `HTTP_PROXY`/`HTTPS_PROXY` from the environment:
 
-```json
-{
-  "proxy": "http://localhost:8080"
-}
+```bash
+source tmp/experiment/proxy.env
+codex ...
 ```
 
 ### Pi
