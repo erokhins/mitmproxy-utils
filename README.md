@@ -49,17 +49,25 @@ File: `tmp/experiment/.claude/settings.json` — picked up automatically when yo
 
 ### Junie
 
-File: `tmp/experiment/.junie/models/proxy.json` — add your model's `baseUrl`, `id`, and `apiKey`, then select this model in Junie.
+Junie is JVM-based, so it ignores `HTTP_PROXY`. Use `JAVA_TOOL_OPTIONS` instead, which the JVM reads automatically at startup.
 
-```json
-{
-  "baseUrl": "FILL_IN",
-  "id": "FILL_IN",
-  "apiType": "OpenAICompletion",
-  "apiKey": "FILL_IN",
-  "debugProxyUrl": "http://localhost:8080/"
-}
+**One-time: create a JKS truststore** from the mitmproxy CA cert so Junie trusts intercepted TLS connections:
+
+```bash
+keytool -importcert -alias mitmproxy \
+  -file ~/.mitmproxy/mitmproxy-ca-cert.pem \
+  -keystore ~/.mitmproxy/mitmproxy-truststore.jks \
+  -storepass changeit -noprompt
 ```
+
+**Then source `proxy.env`** before running Junie — it sets `JAVA_TOOL_OPTIONS` with the proxy host/port and truststore path:
+
+```bash
+source tmp/experiment/proxy.env
+junie
+```
+
+Alternatively, Junie's model config supports `"debugProxyUrl"` for routing a specific model's traffic through the proxy without needing `JAVA_TOOL_OPTIONS`. Template: `tmp/experiment/.junie/models/proxy.json`.
 
 ### Codex
 
