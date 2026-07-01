@@ -27,7 +27,7 @@ This downloads mitmproxy 12.2.2 for Linux x86_64 into the current directory. The
 ./start.sh
 ```
 
-Then open **http://localhost:8081** (mitmweb UI). LLM requests are automatically rendered with the "LLM Request" content view.
+mitmweb opens **http://localhost:8081** automatically. LLM requests are rendered there with the "LLM Request" content view. For the richer LLM viewer, open **http://localhost:8082** manually.
 
 ## proxy.env
 
