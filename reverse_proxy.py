@@ -108,7 +108,13 @@ def load(loader) -> None:
     ROUTES = parse_routes(CONFIG_PATH)
 
 
-def request(flow: http.HTTPFlow) -> None:
+def requestheaders(flow: http.HTTPFlow) -> None:
+    # Rewrite as soon as headers arrive, not in request() (which only fires
+    # after the full body is read): with stream_large_bodies set low, mitmproxy
+    # opens the upstream connection off the Content-Length header as soon as
+    # headers are in, using whatever host/port the flow has *at that point* —
+    # for a reverse-mode listener, that's still the dummy placeholder target
+    # unless we've already rewritten it here.
     if not ROUTES:
         return
     listen_port = flow.client_conn.sockname[1]
