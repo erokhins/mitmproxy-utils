@@ -105,6 +105,32 @@ A standalone web UI on **http://localhost:8082** that renders captured LLM reque
 
 ![LLM Viewer](llm_viewer_screenshot.png)
 
+### `reverse_proxy.py`
+
+A path-based local reverse proxy, configured from `reverse_proxy.conf`. Useful for
+giving local dev backends stable, prefixed URLs (`localhost:8091/exo/...`,
+`localhost:8091/mtp/...`) without editing each tool's own config. Since it's just
+another mitmproxy addon, routed requests are captured like any other flow and show
+up in mitmweb at **http://localhost:8081** — note their displayed "host" will be the
+*rewritten* target, since that's what mitmproxy actually connected to.
+
+`reverse_proxy.conf` syntax — one route per line, `#` comments and blank lines ignored:
+
+```
+localhost:8091/exo/$url --> localhost:52415/$url
+localhost:8091/mtp --> localhost:8000
+```
+
+The path is matched as a prefix; everything under it is forwarded with the prefix
+replaced by the target's path. `$url` is optional and just documents where the
+remainder goes — omitting it (second line above) behaves the same way, forwarding
+`/mtp/anything` to `localhost:8000/anything`.
+
+`start.sh` reads this file to derive the `--mode reverse:...` listener mitmproxy
+needs for each configured port; an empty or missing config file is a no-op (no extra
+listeners, existing LLM-capture behavior unchanged). HTTP only — no HTTPS/WebSocket
+upstreams.
+
 ## Scripts
 
 | File | Purpose |
@@ -112,3 +138,4 @@ A standalone web UI on **http://localhost:8082** that renders captured LLM reque
 | `start.sh` | Launch mitmweb with the LLM addons |
 | `init.sh` | Download mitmproxy binaries |
 | `proxy.env` | Environment variables for routing all AI tools through the proxy |
+| `reverse_proxy.conf` | Routes for the local reverse-proxy addon |
