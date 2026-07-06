@@ -298,6 +298,7 @@ def _parse_sse_response(body: bytes) -> dict | None:
     # ── OpenAI Chat Completions streaming ─────────────────────────────────────
     text_parts: list[str] = []
     reasoning_parts: list[str] = []
+    tool_calls: dict[int, dict] = {}
     finish_reason: str | None = None
     chat_id: str | None = None
     raw_usage: dict = {}
@@ -314,17 +315,39 @@ def _parse_sse_response(body: bytes) -> dict | None:
             r = delta.get("reasoning") or delta.get("reasoning_content") or ""
             if r:
                 reasoning_parts.append(r)
+            for tc in delta.get("tool_calls") or []:
+                idx = tc.get("index", 0)
+                slot = tool_calls.setdefault(idx, {"id": "", "name": "", "arguments": ""})
+                if tc.get("id"):
+                    slot["id"] = tc["id"]
+                fn = tc.get("function") or {}
+                if fn.get("name"):
+                    slot["name"] = fn["name"]
+                if fn.get("arguments"):
+                    slot["arguments"] += fn["arguments"]
             if choices[0].get("finish_reason"):
                 finish_reason = choices[0]["finish_reason"]
         if data.get("usage"):
             raw_usage = data["usage"]
 
-    if text_parts or reasoning_parts:
+    if text_parts or reasoning_parts or tool_calls:
         blocks = []
         if reasoning_parts:
             blocks.append({"type": "thinking", "thinking": "".join(reasoning_parts)})
         if text_parts:
             blocks.append({"type": "text", "text": "".join(text_parts)})
+        for idx in sorted(tool_calls):
+            tc = tool_calls[idx]
+            try:
+                input_data = json.loads(tc["arguments"] or "{}")
+            except Exception:
+                input_data = {"arguments": tc["arguments"]}
+            blocks.append({
+                "type": "tool_use",
+                "id": tc["id"],
+                "name": tc["name"],
+                "input": input_data,
+            })
         return {
             "id": chat_id,
             "content": blocks,
@@ -409,6 +432,18 @@ def _parse_response(parsed: dict) -> dict | None:
             blocks.append({"type": "thinking", "thinking": reasoning})
         if text:
             blocks.append({"type": "text", "text": text})
+        for tc in message.get("tool_calls") or []:
+            fn = tc.get("function") or {}
+            try:
+                input_data = json.loads(fn.get("arguments") or "{}")
+            except Exception:
+                input_data = {"arguments": fn.get("arguments", "")}
+            blocks.append({
+                "type": "tool_use",
+                "id": tc.get("id", ""),
+                "name": fn.get("name", ""),
+                "input": input_data,
+            })
 
         raw_usage = parsed.get("usage", {})
         usage = {
