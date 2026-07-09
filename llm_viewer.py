@@ -499,10 +499,10 @@ def error(flow: http.HTTPFlow) -> None:
 
 
 def running() -> None:
-    server = ThreadingHTTPServer(("127.0.0.1", PORT), _Handler)
+    server = ThreadingHTTPServer(("0.0.0.0", PORT), _Handler)
     t = threading.Thread(target=server.serve_forever, daemon=True)
     t.start()
-    print(f"\n  LLM Viewer → http://localhost:{PORT}\n")
+    print(f"\n  LLM Viewer → http://0.0.0.0:{PORT}\n")
 
 
 # ── embedded HTML page ─────────────────────────────────────────────────────────

@@ -7,5 +7,6 @@ EXTRA_MODES=$(python3 reverse_proxy.py)
 
 ./mitmweb --set stream_large_bodies=1 --set store_streamed_bodies=true \
   --set connection_strategy=lazy \
+  --set web_host=0.0.0.0 \
   --mode regular $EXTRA_MODES \
   -s sse_capture.py -s llm_request_view.py -s llm_viewer.py -s reverse_proxy.py
