@@ -10,9 +10,11 @@ Load with: mitmproxy -s llm_viewer.py
 import json
 import queue
 import threading
+import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import urlparse, parse_qs
 
-from mitmproxy import http
+from mitmproxy import ctx, http
 
 PORT = 8082
 MAX_FLOWS = 200
@@ -502,7 +504,22 @@ def running() -> None:
     server = ThreadingHTTPServer(("0.0.0.0", PORT), _Handler)
     t = threading.Thread(target=server.serve_forever, daemon=True)
     t.start()
-    print(f"\n  LLM Viewer → http://0.0.0.0:{PORT}\n")
+
+    # Open both mitmweb UI and LLM Viewer in the browser (use localhost,
+    # not 0.0.0.0 — browsers can't connect to 0.0.0.0).
+    # Extract the auto-generated token from mitmproxy's web_url so the
+    # browser doesn't prompt for authentication.
+    web_url = getattr(ctx.master, "web_url", "http://localhost:8081/")
+    token = parse_qs(urlparse(web_url).query).get("token", [None])[0]
+    if token:
+        mitmweb_url = f"http://localhost:8081/?token={token}"
+    else:
+        mitmweb_url = "http://localhost:8081/"
+    webbrowser.open(mitmweb_url)
+    webbrowser.open(f"http://localhost:{PORT}")
+
+    print(f"\n  mitmweb   → {mitmweb_url}")
+    print(f"  LLM Viewer → http://localhost:{PORT}\n")
 
 
 # ── embedded HTML page ─────────────────────────────────────────────────────────
