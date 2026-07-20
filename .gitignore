@@ -5,3 +5,4 @@ __pycache__/
 *.py[cod]
 .mitmproxy/
 tmp/
+reverse_proxy.conf

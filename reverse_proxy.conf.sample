@@ -8,5 +8,6 @@
 # optional and just documents where the remainder goes; omitting it (as in
 # the second route below) has the same effect.
 
-localhost:8091/exo --> localhost:52415
-localhost:8091/mtp --> localhost:8000
+# Example routes (uncomment to enable):
+# localhost:8091/exo --> localhost:52415
+# localhost:8091/mtp --> localhost:8000

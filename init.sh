@@ -11,6 +11,11 @@ if command -v mitmweb &>/dev/null; then
     echo "  $bin -> $path"
   done
   echo "Done. Run ./start.sh to launch."
+  # Copy reverse proxy config from sample (skip if already exists)
+  if [ ! -f reverse_proxy.conf ]; then
+    cp reverse_proxy.conf.sample reverse_proxy.conf
+    echo "Copied reverse_proxy.conf.sample -> reverse_proxy.conf"
+  fi
   exit 0
 fi
 
@@ -27,5 +32,11 @@ echo "Extracting..."
 tar -xzf "$ARCHIVE" mitmproxy mitmdump mitmweb
 chmod +x mitmproxy mitmdump mitmweb
 rm "$ARCHIVE"
+
+# Copy reverse proxy config from sample (skip if already exists)
+if [ ! -f reverse_proxy.conf ]; then
+  cp reverse_proxy.conf.sample reverse_proxy.conf
+  echo "Copied reverse_proxy.conf.sample -> reverse_proxy.conf"
+fi
 
 echo "Done. Run ./start.sh to launch."
