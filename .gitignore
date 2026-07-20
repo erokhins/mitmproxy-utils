@@ -6,3 +6,4 @@ __pycache__/
 .mitmproxy/
 tmp/
 reverse_proxy.conf
+.idea/
